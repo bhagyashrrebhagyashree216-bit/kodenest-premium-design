@@ -6,15 +6,30 @@ import {
   ClipboardList,
   BookOpen,
   User,
+  Sparkles,
+  History,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/dashboard/analyzer', label: 'JD Analyzer', icon: Sparkles },
+  { path: '/dashboard/history', label: 'History', icon: History },
   { path: '/dashboard/practice', label: 'Practice', icon: Code2 },
   { path: '/dashboard/assessments', label: 'Assessments', icon: ClipboardList },
   { path: '/dashboard/resources', label: 'Resources', icon: BookOpen },
   { path: '/dashboard/profile', label: 'Profile', icon: User },
 ];
+
+function getPageTitle(pathname: string): string {
+  // Check exact matches first
+  const exactMatch = navItems.find((item) => item.path === pathname);
+  if (exactMatch) return exactMatch.label;
+  
+  // Handle results page
+  if (pathname.startsWith('/dashboard/results')) return 'Analysis Results';
+  
+  return 'Dashboard';
+}
 
 export const DashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -71,8 +86,7 @@ export const DashboardLayout: React.FC = () => {
         {/* Header */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
           <h2 className="text-lg font-semibold text-gray-900">
-            {navItems.find((item) => item.path === location.pathname)?.label ||
-              'Dashboard'}
+            {getPageTitle(location.pathname)}
           </h2>
           <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
             <User className="w-5 h-5 text-primary" />
