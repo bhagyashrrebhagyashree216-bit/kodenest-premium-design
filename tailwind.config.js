@@ -17,6 +17,20 @@ export default {
         warning: '#B8860B',
         border: '#E0DED9',
         'border-light': '#EBE9E4',
+        // Indigo/Purple color scheme for Placement Platform
+        primary: {
+          DEFAULT: 'hsl(245, 58%, 51%)',
+          50: 'hsl(245, 58%, 97%)',
+          100: 'hsl(245, 58%, 92%)',
+          200: 'hsl(245, 58%, 82%)',
+          300: 'hsl(245, 58%, 72%)',
+          400: 'hsl(245, 58%, 62%)',
+          500: 'hsl(245, 58%, 51%)',
+          600: 'hsl(245, 58%, 45%)',
+          700: 'hsl(245, 58%, 38%)',
+          800: 'hsl(245, 58%, 28%)',
+          900: 'hsl(245, 58%, 18%)',
+        },
       },
       fontFamily: {
         serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
