@@ -51,3 +51,15 @@ export function getLatestAnalysis(): HistoryEntry | null {
   const history = getHistory();
   return history.length > 0 ? history[0] : null;
 }
+
+export function updateAnalysis(updatedEntry: HistoryEntry): void {
+  try {
+    const existing = getHistory();
+    const updated = existing.map(entry => 
+      entry.id === updatedEntry.id ? updatedEntry : entry
+    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Failed to update analysis:', error);
+  }
+}

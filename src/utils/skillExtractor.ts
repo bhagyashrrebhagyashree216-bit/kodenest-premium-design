@@ -7,6 +7,8 @@ export interface ExtractedSkills {
   testing: string[];
 }
 
+export type SkillConfidence = 'know' | 'practice';
+
 export interface AnalysisResult {
   id: string;
   createdAt: string;
@@ -18,6 +20,7 @@ export interface AnalysisResult {
   checklist: RoundChecklist[];
   questions: string[];
   readinessScore: number;
+  skillConfidenceMap?: Record<string, SkillConfidence>;
 }
 
 export interface DayPlan {
