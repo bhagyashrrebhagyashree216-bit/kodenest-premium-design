@@ -1,19 +1,34 @@
-import type { AnalysisResult, DayPlan, RoundChecklist } from './skillExtractor';
+import type { AnalysisResult } from './skillExtractor';
+
+// New plan format from schema
+interface Plan7DaysItem {
+  day: number;
+  focus: string;
+  tasks: string[];
+}
+
+// New checklist format from schema
+interface ChecklistItem {
+  roundTitle: string;
+  items: string[];
+}
 
 export function copyToClipboard(text: string): Promise<void> {
   return navigator.clipboard.writeText(text);
 }
 
-export function formatPlanAsText(plan: DayPlan[]): string {
+export function formatPlanAsText(plan: Plan7DaysItem[]): string {
+  if (!plan || plan.length === 0) return 'No plan available.';
   return plan.map(day => 
-    `Day ${day.day}: ${day.title}\n` +
+    `Day ${day.day}: ${day.focus}\n` +
     day.tasks.map(task => `  • ${task}`).join('\n')
   ).join('\n\n');
 }
 
-export function formatChecklistAsText(checklist: RoundChecklist[]): string {
+export function formatChecklistAsText(checklist: ChecklistItem[]): string {
+  if (!checklist || checklist.length === 0) return 'No checklist available.';
   return checklist.map(round =>
-    `Round ${round.round}: ${round.title}\n` +
+    `${round.roundTitle}\n` +
     round.items.map(item => `  □ ${item}`).join('\n')
   ).join('\n\n');
 }
@@ -28,23 +43,30 @@ export function generateFullReport(analysis: AnalysisResult): string {
     ...analysis.extractedSkills.languages,
     ...analysis.extractedSkills.web,
     ...analysis.extractedSkills.data,
-    ...analysis.extractedSkills.cloudDevOps,
+    ...analysis.extractedSkills.cloud,
     ...analysis.extractedSkills.testing,
+    ...analysis.extractedSkills.other,
   ];
 
   const confidenceMap = analysis.skillConfidenceMap || {};
   const knownSkills = skills.filter(s => confidenceMap[s] === 'know');
   const practiceSkills = skills.filter(s => confidenceMap[s] !== 'know');
+  
+  // Use new schema fields with fallbacks
+  const plan = analysis.plan7Days || [];
+  const checklist = analysis.checklist || [];
+  const score = analysis.finalScore ?? analysis.readinessScore ?? 0;
 
   return `
 ========================================
 PLACEMENT PREPARATION REPORT
 ========================================
 
-Company: ${analysis.company}
-Role: ${analysis.role}
+Company: ${analysis.company || 'N/A'}
+Role: ${analysis.role || 'N/A'}
 Date: ${new Date(analysis.createdAt).toLocaleDateString()}
-Readiness Score: ${analysis.readinessScore}/100
+Readiness Score: ${score}/100
+Base Score: ${analysis.baseScore ?? 'N/A'}
 
 ----------------------------------------
 SKILLS ASSESSMENT
@@ -63,13 +85,13 @@ ${practiceSkills.length > 0 ? practiceSkills.map(s => `  ○ ${s}`).join('\n') :
 7-DAY PREPARATION PLAN
 ----------------------------------------
 
-${formatPlanAsText(analysis.plan)}
+${formatPlanAsText(plan)}
 
 ----------------------------------------
 ROUND-WISE CHECKLIST
 ----------------------------------------
 
-${formatChecklistAsText(analysis.checklist)}
+${formatChecklistAsText(checklist)}
 
 ----------------------------------------
 LIKELY INTERVIEW QUESTIONS

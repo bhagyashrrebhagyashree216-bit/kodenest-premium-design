@@ -20,7 +20,7 @@ import {
   Info
 } from 'lucide-react';
 import { CircularProgress } from '../../components/dashboard';
-import { getLatestAnalysis, getAnalysisById, updateAnalysis, type HistoryEntry } from '../../utils/historyService';
+import { getLatestAnalysis, getAnalysisById, updateAnalysis, getCorruptionInfo, clearCorruptionInfo, type HistoryEntry } from '../../utils/historyService';
 import type { SkillConfidence } from '../../utils/skillExtractor';
 import {
   copyToClipboard,
@@ -39,6 +39,7 @@ export const ResultsPage: React.FC = () => {
   const [skillConfidence, setSkillConfidence] = useState<Record<string, SkillConfidence>>({});
   const [liveScore, setLiveScore] = useState(0);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [corruptionWarning, setCorruptionWarning] = useState<string | null>(null);
 
   useEffect(() => {
     const id = searchParams.get('id');
@@ -50,17 +51,26 @@ export const ResultsPage: React.FC = () => {
       result = getLatestAnalysis();
     }
 
+    // Check for corruption info
+    const corruptionInfo = getCorruptionInfo();
+    if (corruptionInfo) {
+      setCorruptionWarning(corruptionInfo.message);
+      clearCorruptionInfo();
+    }
+
     if (result) {
       const confidenceMap = result.skillConfidenceMap || {};
       setSkillConfidence(confidenceMap);
-      setLiveScore(result.readinessScore);
+      // Use finalScore if available, otherwise fall back to baseScore
+      const currentScore = result.finalScore ?? result.baseScore ?? 0;
+      setLiveScore(currentScore);
     }
 
     setAnalysis(result);
     setLoading(false);
   }, [searchParams]);
 
-  // Calculate live score based on skill confidence
+  // Calculate live score based on skill confidence (baseScore never changes)
   const calculateLiveScore = useCallback((baseScore: number, confidence: Record<string, SkillConfidence>) => {
     let score = baseScore;
     Object.values(confidence).forEach(status => {
@@ -79,16 +89,19 @@ export const ResultsPage: React.FC = () => {
     };
 
     setSkillConfidence(newConfidence);
-    const newScore = calculateLiveScore(analysis.readinessScore, newConfidence);
+    // Calculate from baseScore (which never changes)
+    const baseScore = analysis.baseScore ?? analysis.readinessScore ?? 0;
+    const newScore = calculateLiveScore(baseScore, newConfidence);
     setLiveScore(newScore);
 
-    // Persist to localStorage
-    const updatedAnalysis = {
+    // Persist to localStorage - only finalScore and updatedAt change
+    updateAnalysis(analysis.id, newConfidence, newScore);
+    setAnalysis({
       ...analysis,
       skillConfidenceMap: newConfidence,
-    };
-    updateAnalysis(updatedAnalysis);
-    setAnalysis(updatedAnalysis);
+      finalScore: newScore,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   const handleCopy = async (section: string, content: string) => {
@@ -130,7 +143,13 @@ export const ResultsPage: React.FC = () => {
     );
   }
 
-  const { extractedSkills, plan, checklist, questions, company, role, createdAt, companyIntel, roundMapping } = analysis;
+  const { extractedSkills, plan, plan7Days, checklist, questions, company, role, createdAt, companyIntel, roundMappingLegacy } = analysis;
+
+  // Use new schema fields, fallback to legacy
+  const displayPlan = plan7Days ?? plan ?? [];
+  const displayChecklist = checklist ?? [];
+  // Use legacy roundMapping for display (has roundNumber, title, description)
+  const displayRoundMapping = roundMappingLegacy ?? [];
 
   // Flatten skills for display
   const allSkills = [
@@ -138,8 +157,9 @@ export const ResultsPage: React.FC = () => {
     ...extractedSkills.languages.map(s => ({ name: s, category: 'Languages' })),
     ...extractedSkills.web.map(s => ({ name: s, category: 'Web' })),
     ...extractedSkills.data.map(s => ({ name: s, category: 'Data' })),
-    ...extractedSkills.cloudDevOps.map(s => ({ name: s, category: 'Cloud/DevOps' })),
+    ...extractedSkills.cloud.map(s => ({ name: s, category: 'Cloud/DevOps' })),
     ...extractedSkills.testing.map(s => ({ name: s, category: 'Testing' })),
+    ...extractedSkills.other.map(s => ({ name: s, category: 'Other' })),
   ];
 
   const hasAnySkills = allSkills.length > 0;
@@ -162,6 +182,14 @@ export const ResultsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Corruption Warning */}
+      {corruptionWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-700">{corruptionWarning}</p>
+        </div>
+      )}
+
       {/* Demo Mode Note */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
         <Info className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -203,11 +231,11 @@ export const ResultsPage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500">Readiness Score</p>
               <p className="text-3xl font-bold text-gray-900">{liveScore}/100</p>
-              {liveScore !== analysis.readinessScore && (
+              {liveScore !== (analysis.baseScore ?? analysis.readinessScore ?? 0) && (
                 <p className="text-xs text-gray-400">
-                  Base: {analysis.readinessScore}
-                  {liveScore > analysis.readinessScore ? ' +' : ' '}
-                  {liveScore - analysis.readinessScore}
+                  Base: {analysis.baseScore ?? analysis.readinessScore ?? 0}
+                  {liveScore > (analysis.baseScore ?? analysis.readinessScore ?? 0) ? ' +' : ' '}
+                  {liveScore - (analysis.baseScore ?? analysis.readinessScore ?? 0)}
                 </p>
               )}
             </div>
@@ -249,7 +277,7 @@ export const ResultsPage: React.FC = () => {
       )}
 
       {/* Round Mapping Timeline */}
-      {roundMapping && roundMapping.length > 0 && (
+      {displayRoundMapping.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
@@ -260,7 +288,7 @@ export const ResultsPage: React.FC = () => {
             <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
             
             <div className="space-y-6">
-              {roundMapping.map((round, idx) => (
+              {displayRoundMapping.map((round, idx) => (
                 <div key={idx} className="relative flex gap-4">
                   {/* Timeline dot */}
                   <div className="relative z-10 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
@@ -394,7 +422,7 @@ export const ResultsPage: React.FC = () => {
                 7-Day Preparation Plan
               </h2>
               <button
-                onClick={() => handleCopy('plan', formatPlanAsText(plan))}
+                onClick={() => handleCopy('plan', formatPlanAsText(displayPlan))}
                 className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-600 font-medium px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
               >
                 {copiedSection === 'plan' ? (
@@ -411,9 +439,9 @@ export const ResultsPage: React.FC = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {plan.map((day) => (
+              {displayPlan.map((day) => (
                 <div key={day.day} className="border-l-2 border-primary-200 pl-4 py-2">
-                  <h3 className="font-medium text-gray-900">Day {day.day}: {day.title}</h3>
+                  <h3 className="font-medium text-gray-900">Day {day.day}: {day.focus}</h3>
                   <ul className="mt-2 space-y-1">
                     {day.tasks.map((task, idx) => (
                       <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
@@ -438,7 +466,7 @@ export const ResultsPage: React.FC = () => {
                 Round-wise Preparation Checklist
               </h2>
               <button
-                onClick={() => handleCopy('checklist', formatChecklistAsText(checklist))}
+                onClick={() => handleCopy('checklist', formatChecklistAsText(displayChecklist))}
                 className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-600 font-medium px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
               >
                 {copiedSection === 'checklist' ? (
@@ -455,10 +483,10 @@ export const ResultsPage: React.FC = () => {
               </button>
             </div>
             <div className="space-y-4">
-              {checklist.map((round) => (
-                <div key={round.round} className="border border-gray-100 rounded-lg p-4">
+              {displayChecklist.map((round, roundIdx) => (
+                <div key={roundIdx} className="border border-gray-100 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-2">
-                    Round {round.round}: {round.title}
+                    {round.roundTitle}
                   </h3>
                   <ul className="space-y-2">
                     {round.items.map((item, idx) => (
@@ -528,14 +556,14 @@ export const ResultsPage: React.FC = () => {
             Download as TXT
           </button>
           <button
-            onClick={() => handleCopy('plan', formatPlanAsText(plan))}
+            onClick={() => handleCopy('plan', formatPlanAsText(displayPlan))}
             className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
             <Copy className="w-4 h-4" />
             Copy 7-Day Plan
           </button>
           <button
-            onClick={() => handleCopy('checklist', formatChecklistAsText(checklist))}
+            onClick={() => handleCopy('checklist', formatChecklistAsText(displayChecklist))}
             className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
             <Copy className="w-4 h-4" />

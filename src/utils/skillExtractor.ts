@@ -3,8 +3,9 @@ export interface ExtractedSkills {
   languages: string[];
   web: string[];
   data: string[];
-  cloudDevOps: string[];
+  cloud: string[];
   testing: string[];
+  other: string[];
 }
 
 export type SkillConfidence = 'know' | 'practice';
@@ -27,22 +28,57 @@ type RoundInfoType = {
   focusAreas: string[];
 };
 
+// Standardized Analysis Entry Schema
 export interface AnalysisResult {
+  // Core identification
   id: string;
   createdAt: string;
+  updatedAt: string;
+  
+  // Input fields
   company: string;
   role: string;
   jdText: string;
+  
+  // Skills extraction
   extractedSkills: ExtractedSkills;
-  plan: DayPlan[];
-  checklist: RoundChecklist[];
+  
+  // Round mapping
+  roundMapping: {
+    roundTitle: string;
+    focusAreas: string[];
+    whyItMatters: string;
+  }[];
+  
+  // Checklist
+  checklist: {
+    roundTitle: string;
+    items: string[];
+  }[];
+  
+  // 7-day plan
+  plan7Days: {
+    day: number;
+    focus: string;
+    tasks: string[];
+  }[];
+  
+  // Interview questions
   questions: string[];
-  readinessScore: number;
-  skillConfidenceMap?: Record<string, SkillConfidence>;
+  
+  // Scoring
+  baseScore: number;
+  skillConfidenceMap: Record<string, SkillConfidence>;
+  finalScore: number;
+  
+  // Legacy fields for backward compatibility (marked as optional)
+  plan?: DayPlan[];
+  readinessScore?: number;
   companyIntel?: CompanyIntelType;
-  roundMapping?: RoundInfoType[];
+  roundMappingLegacy?: RoundInfoType[];
 }
 
+// Legacy interfaces for backward compatibility
 export interface DayPlan {
   day: number;
   title: string;
@@ -60,7 +96,7 @@ const SKILL_KEYWORDS = {
   languages: ['Java', 'Python', 'JavaScript', 'TypeScript', 'C', 'C++', 'C#', 'Go', 'Golang', 'Rust', 'Swift', 'Kotlin'],
   web: ['React', 'Next.js', 'Node.js', 'Express', 'REST', 'GraphQL', 'Angular', 'Vue', 'HTML', 'CSS', 'Frontend', 'Backend', 'Full Stack'],
   data: ['SQL', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Database', 'NoSQL', 'Elasticsearch'],
-  cloudDevOps: ['AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 'Linux', 'Jenkins', 'GitHub Actions', 'Terraform', 'Cloud'],
+  cloud: ['AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 'Linux', 'Jenkins', 'GitHub Actions', 'Terraform', 'Cloud'],
   testing: ['Selenium', 'Cypress', 'Playwright', 'JUnit', 'PyTest', 'Jest', 'Testing', 'Automation'],
 };
 
@@ -71,8 +107,9 @@ export function extractSkills(jdText: string): ExtractedSkills {
     languages: [],
     web: [],
     data: [],
-    cloudDevOps: [],
+    cloud: [],
     testing: [],
+    other: [],
   };
 
   // Helper to check if keyword exists in text
@@ -182,8 +219,8 @@ export function generateChecklist(skills: ExtractedSkills): RoundChecklist[] {
         ...(hasSkill('web', 'React') ? ['React hooks, state management, component lifecycle'] : []),
         ...(hasSkill('web', 'Node.js') ? ['Node.js event loop, async programming, Express middleware'] : []),
         ...(hasSkill('data', 'SQL') ? ['Database optimization, indexing, query performance'] : []),
-        ...(hasSkill('cloudDevOps', 'AWS') ? ['AWS services: EC2, S3, Lambda basics'] : []),
-        ...(hasSkill('cloudDevOps', 'Docker') ? ['Docker containers, images, docker-compose'] : []),
+        ...(hasSkill('cloud', 'AWS') ? ['AWS services: EC2, S3, Lambda basics'] : []),
+        ...(hasSkill('cloud', 'Docker') ? ['Docker containers, images, docker-compose'] : []),
         ...(hasSkill('testing', 'Selenium') || hasSkill('testing', 'Cypress') ? ['Testing frameworks and automation strategies'] : []),
         'System design basics for your experience level',
         'Be ready to write code on screen/whiteboard',
@@ -389,7 +426,7 @@ export function generateQuestions(skills: ExtractedSkills): string[] {
   }
 
   // Cloud/DevOps questions
-  if (hasSkill('cloudDevOps', 'AWS')) {
+  if (hasSkill('cloud', 'AWS')) {
     questions.push(
       'Explain the difference between EC2, Lambda, and ECS.',
       'What is S3 and what are its use cases?',
@@ -397,7 +434,7 @@ export function generateQuestions(skills: ExtractedSkills): string[] {
     );
   }
 
-  if (hasSkill('cloudDevOps', 'Docker')) {
+  if (hasSkill('cloud', 'Docker')) {
     questions.push(
       'What is the difference between a Docker image and container?',
       'Explain Docker volumes and when to use them.',
@@ -428,30 +465,97 @@ export function generateQuestions(skills: ExtractedSkills): string[] {
   return questions.slice(0, 10);
 }
 
+// Default skills when no skills are detected
+const DEFAULT_SKILLS: ExtractedSkills = {
+  coreCS: [],
+  languages: [],
+  web: [],
+  data: [],
+  cloud: [],
+  testing: [],
+  other: ['Communication', 'Problem solving', 'Basic coding', 'Projects'],
+};
+
+// Check if skills object is effectively empty
+function hasNoSkills(skills: ExtractedSkills): boolean {
+  return Object.values(skills).every(arr => arr.length === 0);
+}
+
 export function analyzeJD(
   company: string,
   role: string,
   jdText: string
 ): AnalysisResult {
-  const skills = extractSkills(jdText);
-  const score = calculateReadinessScore(skills, company, role, jdText.length);
-  const plan = generatePlan(skills);
-  const checklist = generateChecklist(skills);
+  let skills = extractSkills(jdText);
+  
+  // If no skills detected, use defaults
+  const usedDefaultSkills = hasNoSkills(skills);
+  if (usedDefaultSkills) {
+    skills = { ...DEFAULT_SKILLS };
+  }
+  
+  const baseScore = calculateReadinessScore(skills, company, role, jdText.length);
+  const legacyPlan = generatePlan(skills);
+  const legacyChecklist = generateChecklist(skills);
   const questions = generateQuestions(skills);
-
-  // Company intel and round mapping will be added by the caller to avoid circular dependency
+  
+  // Build skillConfidenceMap with all skills defaulting to 'practice'
+  const skillConfidenceMap: Record<string, SkillConfidence> = {};
+  Object.values(skills).forEach(categorySkills => {
+    categorySkills.forEach((skill: string) => {
+      skillConfidenceMap[skill] = 'practice';
+    });
+  });
+  
+  // Convert legacy plan to new plan7Days format
+  const plan7Days = legacyPlan.map(day => ({
+    day: day.day,
+    focus: day.title,
+    tasks: day.tasks,
+  }));
+  
+  // Convert legacy checklist to new format
+  const checklist = legacyChecklist.map(round => ({
+    roundTitle: round.title,
+    items: round.items.filter(item => typeof item === 'string'),
+  }));
+  
+  // Build roundMapping (will be populated by caller if company provided)
+  const roundMapping: { roundTitle: string; focusAreas: string[]; whyItMatters: string }[] = [];
 
   return {
+    // Core identification
     id: Date.now().toString(),
     createdAt: new Date().toISOString(),
-    company: company || 'Unknown Company',
-    role: role || 'Unknown Role',
+    updatedAt: new Date().toISOString(),
+    
+    // Input fields
+    company: company || '',
+    role: role || '',
     jdText,
+    
+    // Skills extraction
     extractedSkills: skills,
-    plan,
+    
+    // Round mapping (populated by caller)
+    roundMapping,
+    
+    // Checklist
     checklist,
+    
+    // 7-day plan
+    plan7Days,
+    
+    // Interview questions
     questions,
-    readinessScore: score,
-    // companyIntel and roundMapping are added by the caller
+    
+    // Scoring
+    baseScore,
+    skillConfidenceMap,
+    finalScore: baseScore,
+    
+    // Legacy fields for backward compatibility
+    plan: legacyPlan,
+    readinessScore: baseScore,
   };
 }

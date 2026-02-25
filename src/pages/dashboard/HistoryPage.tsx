@@ -178,10 +178,10 @@ export const HistoryPage: React.FC = () => {
 
                 <div className="flex items-center gap-4">
                   {/* Score */}
-                  <div className={`px-4 py-2 rounded-lg ${getScoreColor(entry.readinessScore)}`}>
+                  <div className={`px-4 py-2 rounded-lg ${getScoreColor(entry.finalScore ?? entry.readinessScore ?? 0)}`}>
                     <div className="flex items-center gap-1">
                       <Award className="w-4 h-4" />
-                      <span className="font-bold">{entry.readinessScore}</span>
+                      <span className="font-bold">{entry.finalScore ?? entry.readinessScore ?? 0}</span>
                     </div>
                   </div>
 
@@ -208,7 +208,8 @@ function allSkillsCount(skills: HistoryEntry['extractedSkills']): number {
     skills.languages.length +
     skills.web.length +
     skills.data.length +
-    skills.cloudDevOps.length +
-    skills.testing.length
+    skills.cloud.length +
+    skills.testing.length +
+    skills.other.length
   );
 }

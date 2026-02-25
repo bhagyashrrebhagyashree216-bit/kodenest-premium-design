@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Building2, FileText, Sparkles } from 'lucide-react';
+import { Briefcase, Building2, FileText, Sparkles, AlertTriangle } from 'lucide-react';
 import { analyzeJD } from '../../utils/skillExtractor';
 import { saveAnalysis } from '../../utils/historyService';
 import { generateCompanyIntel, generateRoundMapping } from '../../utils/companyIntel';
@@ -39,20 +39,39 @@ export const JDAnalyzerPage: React.FC = () => {
   const [role, setRole] = useState('');
   const [jdText, setJdText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showShortWarning, setShowShortWarning] = useState(false);
+
+  const handleJdChange = (value: string) => {
+    setJdText(value);
+    // Show warning if JD is between 1 and 200 characters
+    const trimmed = value.trim();
+    if (trimmed.length > 0 && trimmed.length < 200) {
+      setShowShortWarning(true);
+    } else {
+      setShowShortWarning(false);
+    }
+  };
 
   const handleAnalyze = () => {
-    if (!jdText.trim()) return;
+    const trimmedJd = jdText.trim();
+    if (!trimmedJd) return;
 
     setIsAnalyzing(true);
     
     // Simulate analysis delay for UX
     setTimeout(() => {
-      const result = analyzeJD(company, role, jdText);
+      const result = analyzeJD(company, role, trimmedJd);
       
       // Add company intel and round mapping
       if (company) {
         result.companyIntel = generateCompanyIntel(company);
-        result.roundMapping = generateRoundMapping(result.companyIntel, result.extractedSkills);
+        result.roundMappingLegacy = generateRoundMapping(result.companyIntel, result.extractedSkills);
+        // Also populate new roundMapping schema
+        result.roundMapping = result.roundMappingLegacy.map(r => ({
+          roundTitle: r.title,
+          focusAreas: r.focusAreas,
+          whyItMatters: r.whyItMatters,
+        }));
       }
       
       saveAnalysis(result);
@@ -65,9 +84,10 @@ export const JDAnalyzerPage: React.FC = () => {
     setCompany('TechCorp Inc.');
     setRole('Software Engineer - Full Stack');
     setJdText(SAMPLE_JD);
+    setShowShortWarning(false);
   };
 
-  const isValid = jdText.trim().length > 50;
+  const isValid = jdText.trim().length > 0;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -122,13 +142,25 @@ export const JDAnalyzerPage: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <span className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Job Description
+              Job Description <span className="text-red-500">*</span>
             </span>
           </label>
+          
+          {/* Short JD Warning */}
+          {showShortWarning && (
+            <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700">
+                This JD is too short to analyze deeply. Paste full JD for better output.
+              </p>
+            </div>
+          )}
+          
           <textarea
             value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
+            onChange={(e) => handleJdChange(e.target.value)}
             placeholder="Paste the job description here..."
+            required
             rows={12}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-y font-mono text-sm"
           />

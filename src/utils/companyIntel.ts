@@ -109,7 +109,7 @@ export function generateRoundMapping(
 
   const hasDSA = hasSkill('coreCS', 'DSA') || hasSkill('coreCS');
   const hasWeb = hasSkill('web', 'React') || hasSkill('web', 'Node.js') || skills.web.length > 0;
-  const hasSystemDesign = hasSkill('coreCS', 'System Design') || hasSkill('cloudDevOps');
+  const hasSystemDesign = hasSkill('coreCS', 'System Design') || hasSkill('cloud');
 
   // Enterprise rounds
   if (companyIntel.size === 'enterprise') {
