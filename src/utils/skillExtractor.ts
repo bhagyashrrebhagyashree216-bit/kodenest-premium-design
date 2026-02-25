@@ -9,6 +9,24 @@ export interface ExtractedSkills {
 
 export type SkillConfidence = 'know' | 'practice';
 
+// Forward declarations to avoid circular imports
+type CompanyIntelType = {
+  name: string;
+  industry: string;
+  size: 'startup' | 'mid' | 'enterprise';
+  sizeLabel: string;
+  hiringFocus: string;
+  typicalRounds: number;
+};
+
+type RoundInfoType = {
+  roundNumber: number;
+  title: string;
+  description: string;
+  whyItMatters: string;
+  focusAreas: string[];
+};
+
 export interface AnalysisResult {
   id: string;
   createdAt: string;
@@ -21,6 +39,8 @@ export interface AnalysisResult {
   questions: string[];
   readinessScore: number;
   skillConfidenceMap?: Record<string, SkillConfidence>;
+  companyIntel?: CompanyIntelType;
+  roundMapping?: RoundInfoType[];
 }
 
 export interface DayPlan {
@@ -419,6 +439,8 @@ export function analyzeJD(
   const checklist = generateChecklist(skills);
   const questions = generateQuestions(skills);
 
+  // Company intel and round mapping will be added by the caller to avoid circular dependency
+
   return {
     id: Date.now().toString(),
     createdAt: new Date().toISOString(),
@@ -430,5 +452,6 @@ export function analyzeJD(
     checklist,
     questions,
     readinessScore: score,
+    // companyIntel and roundMapping are added by the caller
   };
 }

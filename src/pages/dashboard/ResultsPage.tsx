@@ -14,7 +14,10 @@ import {
   Download,
   Check,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Users,
+  BriefcaseBusiness,
+  Info
 } from 'lucide-react';
 import { CircularProgress } from '../../components/dashboard';
 import { getLatestAnalysis, getAnalysisById, updateAnalysis, type HistoryEntry } from '../../utils/historyService';
@@ -127,7 +130,7 @@ export const ResultsPage: React.FC = () => {
     );
   }
 
-  const { extractedSkills, plan, checklist, questions, company, role, createdAt } = analysis;
+  const { extractedSkills, plan, checklist, questions, company, role, createdAt, companyIntel, roundMapping } = analysis;
 
   // Flatten skills for display
   const allSkills = [
@@ -147,8 +150,26 @@ export const ResultsPage: React.FC = () => {
     .slice(0, 3)
     .map(s => s.name);
 
+  // Helper for company size badge color
+  const getSizeColor = (size?: string) => {
+    switch (size) {
+      case 'startup': return 'bg-green-100 text-green-700';
+      case 'mid': return 'bg-blue-100 text-blue-700';
+      case 'enterprise': return 'bg-purple-100 text-purple-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Demo Mode Note */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+        <Info className="w-4 h-4 text-blue-600 flex-shrink-0" />
+        <p className="text-sm text-blue-700">
+          Demo Mode: Company intel generated heuristically.
+        </p>
+      </div>
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -193,6 +214,89 @@ export const ResultsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Company Intel Card */}
+      {companyIntel && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BriefcaseBusiness className="w-5 h-5 text-primary" />
+              Company Intel
+            </h2>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getSizeColor(companyIntel.size)}`}>
+              {companyIntel.sizeLabel}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Company</p>
+              <p className="font-semibold text-gray-900">{companyIntel.name}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Industry</p>
+              <p className="font-semibold text-gray-900">{companyIntel.industry}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Typical Rounds</p>
+              <p className="font-semibold text-gray-900">{companyIntel.typicalRounds}</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-sm text-gray-500 mb-1">Typical Hiring Focus</p>
+            <p className="text-gray-700">{companyIntel.hiringFocus}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Round Mapping Timeline */}
+      {roundMapping && roundMapping.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Interview Round Mapping
+          </h2>
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
+            
+            <div className="space-y-6">
+              {roundMapping.map((round, idx) => (
+                <div key={idx} className="relative flex gap-4">
+                  {/* Timeline dot */}
+                  <div className="relative z-10 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    R{round.roundNumber}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 pb-6">
+                    <h3 className="font-semibold text-gray-900 text-lg">{round.title}</h3>
+                    <p className="text-gray-600 mt-1">{round.description}</p>
+                    
+                    <div className="mt-3 bg-primary-50 rounded-lg p-3">
+                      <p className="text-sm font-medium text-primary-800 mb-1">Why this round matters:</p>
+                      <p className="text-sm text-primary-700">{round.whyItMatters}</p>
+                    </div>
+                    
+                    <div className="mt-3">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Focus areas:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {round.focusAreas.map((area, areaIdx) => (
+                          <span
+                            key={areaIdx}
+                            className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                          >
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

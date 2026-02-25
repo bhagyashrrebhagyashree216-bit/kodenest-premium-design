@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Briefcase, Building2, FileText, Sparkles } from 'lucide-react';
 import { analyzeJD } from '../../utils/skillExtractor';
 import { saveAnalysis } from '../../utils/historyService';
+import { generateCompanyIntel, generateRoundMapping } from '../../utils/companyIntel';
 
 const SAMPLE_JD = `Software Engineer - Full Stack
 
@@ -47,6 +48,13 @@ export const JDAnalyzerPage: React.FC = () => {
     // Simulate analysis delay for UX
     setTimeout(() => {
       const result = analyzeJD(company, role, jdText);
+      
+      // Add company intel and round mapping
+      if (company) {
+        result.companyIntel = generateCompanyIntel(company);
+        result.roundMapping = generateRoundMapping(result.companyIntel, result.extractedSkills);
+      }
+      
       saveAnalysis(result);
       setIsAnalyzing(false);
       navigate('/dashboard/results');
