@@ -8,6 +8,8 @@ import {
   User,
   Sparkles,
   History,
+  ClipboardCheck,
+  Rocket,
 } from 'lucide-react';
 
 const navItems = [
@@ -18,6 +20,11 @@ const navItems = [
   { path: '/dashboard/assessments', label: 'Assessments', icon: ClipboardList },
   { path: '/dashboard/resources', label: 'Resources', icon: BookOpen },
   { path: '/dashboard/profile', label: 'Profile', icon: User },
+];
+
+const prpNavItems = [
+  { path: '/prp/07-test', label: 'Test Checklist', icon: ClipboardCheck },
+  { path: '/prp/08-ship', label: 'Ship', icon: Rocket },
 ];
 
 function getPageTitle(pathname: string): string {
@@ -66,6 +73,33 @@ export const DashboardLayout: React.FC = () => {
             })}
           </ul>
         </nav>
+
+        {/* PRP Section */}
+        <div className="px-4 py-3 border-t border-gray-200">
+          <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            PRP Admin
+          </p>
+          <ul className="space-y-1">
+            {prpNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <li key={item.path}>
+                  <NavLink
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 text-sm ${
+                      isActive
+                        ? 'bg-primary-50 text-primary font-medium'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-gray-200">
