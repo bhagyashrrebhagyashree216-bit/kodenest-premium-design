@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #F7F6F3;
+    --text-primary: #111111;
+    --text-secondary: #444444;
+    --text-muted: #666666;
+    --accent: #8B0000;
+    --accent-hover: #6B0000;
+    --success: #4A6741;
+    --warning: #B8860B;
+    --border: #E0DED9;
+    --border-light: #EBE9E4;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Georgia, Cambria, 'Times New Roman', Times, serif;
+    font-weight: 400;
+    color: var(--text-primary);
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 150ms ease-in-out;
+  }
+
+  a:hover {
+    color: var(--accent-hover);
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  input, textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent text-white px-6 py-3 rounded font-sans text-body transition-all duration-150 ease-in-out;
+  }
+
+  .btn-primary:hover {
+    @apply bg-accent-hover;
+  }
+
+  .btn-primary:focus {
+    @apply outline-none ring-2 ring-accent ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border border-border text-text-primary px-6 py-3 rounded font-sans text-body transition-all duration-150 ease-in-out;
+  }
+
+  .btn-secondary:hover {
+    @apply border-text-secondary bg-border-light;
+  }
+
+  .btn-secondary:focus {
+    @apply outline-none ring-2 ring-border ring-offset-2;
+  }
+
+  .card {
+    @apply bg-white border border-border rounded p-6;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 border border-border rounded bg-white text-text-primary text-body transition-all duration-150 ease-in-out;
+  }
+
+  .input:focus {
+    @apply outline-none border-accent;
+  }
+
+  .input::placeholder {
+    @apply text-text-muted;
+  }
+}
